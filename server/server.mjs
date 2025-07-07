@@ -1,5 +1,5 @@
-const express = require("express");
-const { writeFile } = require("node:fs/promises");
+import express from "express";
+import { writeFile } from "node:fs/promises";
 const server = express();
 const port = 3000;
 
