@@ -1,52 +1,24 @@
 import express from "express";
-import { writeFile } from "node:fs/promises";
+import { globalMiddleware, authMiddleware } from "./middleware";
+import { errorController, undefinedRouteHandler } from "./error.mjs";
+import { registerController, loginController } from "./controllers/user.mjs";
+import { prizeController } from "./controllers/prize.mjs";
 const server = express();
 const port = 3000;
 
+//body parser middleware
 server.use(express.json());
 
-server.use((req, res, next) => {
-  req.test = "test";
-  console.log("Global Middleware");
-  next();
-});
+server.use(globalMiddleware);
 
-server.post(
-  "/files",
-  (req, res, next) => {
-    console.log("local files Middleware");
-    next();
-  },
-  async (req, res) => {
-    console.log(res.query.name);
-    console.log(req.body);
-    console.log(req.test);
+server.post("/register", registerController);
+server.get("/login", loginController);
+server.get("/prize", authMiddleware, prizeController);
 
-    await writeFile(`./${req.query.name}.txt`, req.body.content);
-    res.json({ data: "files" });
-  }
-);
+// catch all other routes
+server.all(/^.*$/, undefinedRouteHandler);
 
-server.use((req, res, next) => {
-  console.log(req.test);
-  next();
-});
-server.get("/", (req, res) => {
-  res.json("Hello root!");
-});
-server.get("/hello", (req, res) => {
-  res.json("Hello World!");
-});
-
-server.post("/hello", (req, res) => {
-  res.json("Hello World!");
-});
-server.all(/^.*$/, (req, res) => {
-  res.json({
-    message: "Wrong Route",
-  });
-  res.status(404).json("Not Found");
-});
+server.use(errorController);
 
 server.listen(port, () => {
   console.log(`server listening on port ${port}`);

@@ -1,0 +1,16 @@
+const globalMiddleware = (req, res, next) => {
+  req.test = "test";
+  req.name = "apple";
+  console.log("Global Middleware");
+  next();
+};
+
+export const authMiddleware = (req, res, next) => {
+  console.log("check here for login");
+  res.json({
+    error: "Unauthorized access",
+  });
+  next();
+};
+
+export default globalMiddleware;
