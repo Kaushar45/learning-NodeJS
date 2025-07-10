@@ -1,4 +1,4 @@
-const globalMiddleware = (req, res, next) => {
+export const globalMiddleware = (req, res, next) => {
   req.test = "test";
   req.name = "apple";
   console.log("Global Middleware");
@@ -12,5 +12,3 @@ export const authMiddleware = (req, res, next) => {
   });
   next();
 };
-
-export default globalMiddleware;
