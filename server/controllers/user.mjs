@@ -1,3 +1,6 @@
+import { readFile, writeFile } from "node:fs/promises";
+import jwt from "jsonwebtoken";
+
 export const registerController = (req, res, next) => {
   // Validate input
   if (!req.body.username || !req.body.email || !req.body.password) {
@@ -42,9 +45,48 @@ export const registerController = (req, res, next) => {
   next();
 };
 
-export const loginController = (req, res, next) => {
+export const loginController = async (req, res, next) => {
+  // Validate input
+  if (!req.body.email || !req.body.password) {
+    res.status(400).json({
+      error: "Input is not valid.",
+    });
+    return;
+  }
+
+  // read db file in string
+  const fileDataStr = readFile("./db.json", { encoding: "utf-8" });
+
+  // parse string to JSON object
+  const fileData = JSON.parse(fileDataStr);
+
+  // Check if user exists
+  const user = dbData.user.filter((e) => {
+    return e.email === req.body.email;
+  });
+
+  // match user password
+  if (user.password !== req.body.password) {
+    res.status(400).json({
+      error: "wrong password.",
+    });
+    return;
+  }
+
+  const token = jwt.sign(
+    {
+      name: user.name,
+      email: user.email,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "1h",
+    }
+  );
   res.json({
-    message: "This is the login controller",
+    token,
+    name: user.name,
+    email: user.email,
   });
   next();
 };
