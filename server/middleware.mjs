@@ -1,6 +1,5 @@
 import jwt from "jsonwebtoken";
 export const globalMiddleware = (req, res, next) => {
-  req.test = "test";
   req.name = "apple";
   console.log("Global Middleware");
   next();

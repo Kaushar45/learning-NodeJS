@@ -4,6 +4,7 @@ export const errorController = (err, req, res, next) => {
     message: "Internal Server Error",
     error: err.message,
   });
+  next();
 };
 
 export const undefinedRouteHandler = (req, res) => {

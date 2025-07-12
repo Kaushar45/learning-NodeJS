@@ -1,9 +1,9 @@
 import { readFile, writeFile } from "node:fs/promises";
 import jwt from "jsonwebtoken";
 
-export const registerController = (req, res, next) => {
+export const registerController = async (req, res, next) => {
   // Validate input
-  if (!req.body.username || !req.body.email || !req.body.password) {
+  if (!req.body.name || !req.body.email || !req.body.password) {
     res.status(400).json({
       error: "Input is not valid.",
     });
@@ -12,7 +12,7 @@ export const registerController = (req, res, next) => {
   }
 
   // db file read
-  const fileDataStr = readFile("./db.json", { encoding: "utf-8" });
+  const fileDataStr = await readFile("./db.json", { encoding: "utf-8" });
 
   // parse string to JSON object
   const fileData = JSON.parse(fileDataStr);
@@ -25,19 +25,25 @@ export const registerController = (req, res, next) => {
   };
 
   // Check if user already exists
-  if (fileData.user.some((user) => user.email === userData.email)) {
+  if (fileData.users.filter((e) => e.email === userData.email).length > 0) {
     res.status(400).json({
       error: "User already exists.",
     });
     return;
   }
 
+  // Add user to db data
+  if (!fileData.user) {
+    fileData.user = [];
+  }
+
   fileData.user.push(userData);
 
   // db json update
-  writeFile("./db.json", JSON.stringify(fileData), {
+  await writeFile("./db.json", JSON.stringify(fileData), {
     encoding: "utf-8",
   });
+
   // Send response
   res.json({
     message: "Register Successful",
@@ -55,15 +61,15 @@ export const loginController = async (req, res, next) => {
   }
 
   // read db file in string
-  const fileDataStr = readFile("./db.json", { encoding: "utf-8" });
+  const fileDataStr = await readFile("./db.json", { encoding: "utf-8" });
 
   // parse string to JSON object
-  const fileData = JSON.parse(fileDataStr);
+  const dbData = JSON.parse(fileDataStr);
 
   // Check if user exists
   const user = dbData.user.filter((e) => {
     return e.email === req.body.email;
-  });
+  })[0];
 
   // match user password
   if (user.password !== req.body.password) {
