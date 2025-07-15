@@ -1,7 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import jwt from "jsonwebtoken";
 import prisma, { Prisma } from "../db.mjs";
-
+import bcrypt from "bcrypt";
 export const registerController = async (req, res, next) => {
   // Validate input
   if (!req.body.name || !req.body.email || !req.body.password) {
@@ -12,11 +12,15 @@ export const registerController = async (req, res, next) => {
     return;
   }
 
+  // hash password of user
+  const newHashedPassword = await bcrypt.hash(req.body.password, 10);
+
+  // add user in DB
   await prisma.user.create({
     data: {
       name: req.body.name,
       email: req.body.email,
-      password: req.body.password,
+      password: newHashedPassword,
     },
   });
 
@@ -51,7 +55,9 @@ export const loginController = async (req, res, next) => {
   }
 
   // match user password
-  if (user.password !== req.body.password) {
+  const isOk = await bcrypt.compare(req.body.password, user.password);
+
+  if (!isOk) {
     res.status(400).json({
       error: "wrong password.",
     });
