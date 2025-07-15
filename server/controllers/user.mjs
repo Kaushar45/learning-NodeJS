@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import jwt from "jsonwebtoken";
+import prisma, { Prisma } from "../db.mjs";
 
 export const registerController = async (req, res, next) => {
   // Validate input
@@ -11,37 +12,12 @@ export const registerController = async (req, res, next) => {
     return;
   }
 
-  // db file read
-  const fileDataStr = await readFile("./db.json", { encoding: "utf-8" });
-
-  // parse string to JSON object
-  const fileData = JSON.parse(fileDataStr);
-
-  // user data object
-  const userData = {
-    name: req.body.name,
-    email: req.body.email,
-    password: req.body.password,
-  };
-
-  // Check if user already exists
-  if (fileData.users.filter((e) => e.email === userData.email).length > 0) {
-    res.status(400).json({
-      error: "User already exists.",
-    });
-    return;
-  }
-
-  // Add user to db data
-  if (!fileData.user) {
-    fileData.user = [];
-  }
-
-  fileData.user.push(userData);
-
-  // db json update
-  await writeFile("./db.json", JSON.stringify(fileData), {
-    encoding: "utf-8",
+  await prisma.user.create({
+    data: {
+      name: req.body.name,
+      email: req.body.email,
+      password: req.body.password,
+    },
   });
 
   // Send response
@@ -60,16 +36,19 @@ export const loginController = async (req, res, next) => {
     return;
   }
 
-  // read db file in string
-  const fileDataStr = await readFile("./db.json", { encoding: "utf-8" });
+  // find user in DB
+  const user = await prisma.user.findUnique({
+    where: {
+      email: req.body.email,
+    },
+  });
 
-  // parse string to JSON object
-  const dbData = JSON.parse(fileDataStr);
-
-  // Check if user exists
-  const user = dbData.user.filter((e) => {
-    return e.email === req.body.email;
-  })[0];
+  if (!user) {
+    res.status(404).json({
+      error: "user not found.",
+    });
+    return;
+  }
 
   // match user password
   if (user.password !== req.body.password) {
