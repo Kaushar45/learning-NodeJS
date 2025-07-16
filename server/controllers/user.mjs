@@ -1,15 +1,28 @@
-import { readFile, writeFile } from "node:fs/promises";
 import jwt from "jsonwebtoken";
-import prisma, { Prisma } from "../db.mjs";
+import prisma from "../db.mjs";
 import bcrypt from "bcrypt";
+import * as z from "zod";
+
+// input model for user registration
+const UserModel = z.object({
+  name: z
+    .string()
+    .trim()
+    .regex(/^[a-zA-Z0-9\s]*$/, "Name cannot contain special characters"),
+  email: z.email({ message: "Invalid email" }),
+  password: z
+    .string()
+    .min(8, { message: "Password must be at least 8 characters long" }),
+});
+
 export const registerController = async (req, res, next) => {
   // Validate input
-  if (!req.body.name || !req.body.email || !req.body.password) {
-    res.status(400).json({
-      error: "Input is not valid.",
-    });
-    // throw new Error(JSON.stringify({ error: "input is not valid" }));
-    return;
+  try {
+    await UserModel.parseAsync(req.body);
+  } catch (e) {
+    res.status(400);
+    const msg = z.prettifyError(e);
+    return res.json({ error: msg });
   }
 
   // hash password of user
