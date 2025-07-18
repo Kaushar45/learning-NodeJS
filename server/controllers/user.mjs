@@ -44,13 +44,20 @@ export const registerController = async (req, res, next) => {
   next();
 };
 
+const UserLoginModel = z.object({
+  email: z.email({ message: "Invalid email" }),
+  password: z
+    .string()
+    .min(4, { message: "Password must be at least 8 characters long" }),
+});
+
 export const loginController = async (req, res, next) => {
-  // Validate input
-  if (!req.body.email || !req.body.password) {
-    res.status(400).json({
-      error: "Input is not valid.",
-    });
-    return;
+  const result = await UserLoginModel.safeParseAsync(req.body);
+
+  if (!result.success) {
+    res.status(400);
+    const msg = z.prettifyError(result.error);
+    return res.json({ error: msg });
   }
 
   // find user in DB
