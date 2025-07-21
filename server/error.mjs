@@ -1,10 +1,10 @@
 export const errorController = (err, req, res, next) => {
   console.log(err);
+  res.status(404);
   res.json({
-    message: "Internal Server Error",
+    message: "something is not ok",
     error: err.message,
   });
-  next();
 };
 
 export const undefinedRouteHandler = (req, res) => {
