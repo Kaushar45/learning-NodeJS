@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import * as z from "zod";
 import { sendEmail } from "../email.mjs";
 import randomstring from "randomstring";
+import dayjs from "dayjs";
 
 // input model for user registration
 const UserModel = z.object({
@@ -31,14 +32,15 @@ export const registerController = async (req, res, next) => {
   const newHashedPassword = await bcrypt.hash(req.body.password, 10);
 
   // add user in DB
-  const x = await prisma.user.create({
+
+  const user = await prisma.user.create({
     data: {
       name: req.body.name,
       email: req.body.email,
       password: newHashedPassword,
     },
   });
-  console.log(x);
+  console.log(user);
   // Send response
   res.json({
     message: "Register Successful",
@@ -127,4 +129,44 @@ export const forgotPasswordController = async (req, res, next) => {
   res.json({
     message: "Email sent successfully, check your email",
   });
+};
+
+export const resetPasswordController = async (req, res, next) => {
+  const users = await prisma.user.findMany({
+    where: {
+      resetToken: req.params.token,
+    },
+  });
+
+  if (!users) {
+    res.statusCode = 404;
+    return res.json({ message: "invalid reset link" });
+  }
+
+  const user = users[0];
+  const subTime = dayjs().subtract(
+    process.env.RESET_LINK_EXPIRY_TIME_IN_MINUTES,
+    "minute"
+  );
+
+  if (dayjs(subTime).isAfter(dayjs(user.resetTokenExpiry))) {
+    res.statusCode = 400;
+    return res.json({
+      message: "Link has been Expired! Try Again",
+    });
+  }
+
+  const hashedPassword = await bcrypt.hash(req.body.password, 10);
+
+  await prisma.user.update({
+    where: {
+      id: user.id,
+    },
+
+    data: {
+      resetToken: null,
+      password: hashedPassword,
+    },
+  });
+  res.json({ message: "password reset successful" });
 };
