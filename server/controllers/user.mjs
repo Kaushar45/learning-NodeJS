@@ -5,6 +5,7 @@ import * as z from "zod";
 import { sendEmail } from "../email.mjs";
 import randomstring from "randomstring";
 import dayjs from "dayjs";
+import { ServerError } from "../error.mjs";
 
 // input model for user registration
 const UserModel = z.object({
@@ -23,9 +24,8 @@ export const registerController = async (req, res, next) => {
   try {
     await UserModel.parseAsync(req.body);
   } catch (e) {
-    res.status(400);
     const msg = z.prettifyError(e);
-    return res.json({ error: msg });
+    throw new ServerError(400, msg);
   }
 
   // hash password of user
@@ -59,9 +59,8 @@ export const loginController = async (req, res, next) => {
   const result = await UserLoginModel.safeParseAsync(req.body);
 
   if (!result.success) {
-    res.status(400);
     const msg = z.prettifyError(result.error);
-    return res.json({ error: msg });
+    throw new ServerError(400, msg);
   }
 
   // find user in DB
@@ -72,26 +71,21 @@ export const loginController = async (req, res, next) => {
   });
 
   if (!user) {
-    res.status(404).json({
-      error: "user not found.",
-    });
-    return;
+    throw new ServerError(404, "user not found.");
   }
 
   // match user password
   const isOk = await bcrypt.compare(req.body.password, user.password);
 
   if (!isOk) {
-    res.status(400).json({
-      error: "wrong password.",
-    });
-    return;
+    throw new ServerError(400, "wrong password.");
   }
 
   const token = jwt.sign(
     {
       name: user.name,
       email: user.email,
+      role: user.role,
     },
     process.env.TOKEN_SECRET,
     {
@@ -102,6 +96,7 @@ export const loginController = async (req, res, next) => {
     token,
     name: user.name,
     email: user.email,
+    role: user.role,
   });
 };
 
@@ -113,8 +108,7 @@ export const forgotPasswordController = async (req, res, next) => {
   });
 
   if (!user) {
-    res.statusCode = 404;
-    return res.json({ error: "User Does Not Exist" });
+    throw new ServerError(404, "User Does Not Exist");
   }
 
   const token = randomstring.generate();
@@ -139,8 +133,7 @@ export const resetPasswordController = async (req, res, next) => {
   });
 
   if (!users) {
-    res.statusCode = 404;
-    return res.json({ message: "invalid reset link" });
+    throw new ServerError(404, "invalid reset link");
   }
 
   const user = users[0];
@@ -150,10 +143,7 @@ export const resetPasswordController = async (req, res, next) => {
   );
 
   if (dayjs(subTime).isAfter(dayjs(user.resetTokenExpiry))) {
-    res.statusCode = 400;
-    return res.json({
-      message: "Link has been Expired! Try Again",
-    });
+    throw new ServerError(400, "Link has been Expired! Try Again");
   }
 
   const hashedPassword = await bcrypt.hash(req.body.password, 10);
@@ -169,4 +159,8 @@ export const resetPasswordController = async (req, res, next) => {
     },
   });
   res.json({ message: "password reset successful" });
+};
+
+export const getAllUsers = async (req, res, next) => {
+  res.json({ message: "get all user not implemented" });
 };
