@@ -13,6 +13,7 @@ model User {
   email            String       @unique
   name             String
   password         String
+  role             String       @default("user")
   attendance       Attendance[]
   resetToken       String?      @default("")
   resetTokenExpiry DateTime?    @default(now())
