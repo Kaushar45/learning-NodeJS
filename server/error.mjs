@@ -1,10 +1,15 @@
 export const errorController = (err, req, res, next) => {
-  console.log(err);
-  res.status(404);
-  res.json({
-    message: "something is not ok",
-    error: err.message,
-  });
+  if (err.isManual) {
+    res.statusCode = err.statusCode;
+    res.json({ error: err.message });
+  } else {
+    console.log(err);
+    console.log(err.stack);
+    res.statusCode = 500;
+    res.json({
+      error: "something is not ok",
+    });
+  }
 };
 
 export const undefinedRouteHandler = (req, res) => {
@@ -13,3 +18,11 @@ export const undefinedRouteHandler = (req, res) => {
   });
   res.status(404).json("Not Found");
 };
+
+export class ServerError extends Error {
+  constructor(statusCode, errorMessage) {
+    super(errorMessage);
+    this.statusCode = statusCode;
+    this.isManual = true;
+  }
+}

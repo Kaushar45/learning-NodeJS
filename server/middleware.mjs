@@ -1,4 +1,6 @@
 import jwt from "jsonwebtoken";
+import { ServerError } from "./error.mjs";
+
 export const globalMiddleware = (req, res, next) => {
   req.name = "apple";
   console.log("Global Middleware");
@@ -8,24 +10,36 @@ export const globalMiddleware = (req, res, next) => {
 export const authMiddleware = (req, res, next) => {
   // check for token is available or not
   if (!req.headers.authorization) {
-    res.statusCode = 400;
-    return res.json({ error: "token is not sent" });
+    throw new ServerError(400, "token is not sent");
   }
 
   // check for Barer is present or not
   const barerToken = req.headers.authorization.split(" ");
   const token = barerToken[1];
   if (!token) {
-    res.statusCode = 400;
-    return res.json({ error: "token not valid" });
+    throw new ServerError(400, "token not valid");
   }
 
   // validate token
   try {
-    jwt.verify(token, "kuguogyfyfvhgyvhuofkygvkiulju");
+    jwt.verify(token, process.env.TOKEN_SECRET);
   } catch (e) {
-    res.statusCode = 400;
-    return res.json({ error: e.message });
+    throw new ServerError(400, e.message);
   }
+
+  req.user = jwt.decode(token);
   next();
+};
+
+export const permissionMiddleware = (...roles) => {
+  return async (req, res, next) => {
+    if (!req.user || !req.user.role) {
+      throw new ServerError(500, "authentication not added correctly");
+    }
+    const role = roles.filter((e) => e === req.user.role);
+    if (!role.length) {
+      throw new ServerError(401, "you are not authorized!!!");
+    }
+    next();
+  };
 };
